@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <title>წიგნის ნავიგატორი / PDF Reader</title>
+  <title>ალმანახი - ჩემი საქართელო</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
@@ -677,8 +677,8 @@
         <div class="set-group">
           <label>ჩვენების რეჟიმი</label>
           <div class="set-options" id="view-opts">
-            <button class="opt-btn active" data-mode="double">ორმაგი</button>
-            <button class="opt-btn" data-mode="single">ერთმაგი</button>
+            <button class="opt-btn active" data-mode="double">გადაფურცვლა</button>
+            <button class="opt-btn" data-mode="single">ჩამოსქროლვა</button>
           </div>
         </div>
 
@@ -718,13 +718,13 @@
 
   <script src="https://cdn.jsdelivr.net/npm/page-flip@2.0.7/dist/js/page-flip.browser.js"></script>
   <script>
-    // 1. ავტომატურად ვაგენერირებთ 50 გვერდის მისამართს pages/001.webp - დან pages/050.webp - ის ჩათვლით
-    const PAGES = Array.from({ length: 50 }, (_, i) => {
+    // 1. ავტომატურად ვაგენერირებთ 63 გვერდის მისამართს pages/001.webp - დან pages/063.webp - ის ჩათვლით
+    const PAGES = Array.from({ length: 63 }, (_, i) => {
       const pageNum = String(i + 1).padStart(3, '0');
       return `pages/${pageNum}.webp`;
     });
 
-    const BOOK_TITLE = "ჩემი წიგნი";
+    const BOOK_TITLE = "ალმანახი - ჩემი საქართელო";
     document.getElementById("ttl").innerText = BOOK_TITLE;
 
     let pageFlip = null;
