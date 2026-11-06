@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <title>ალმანახი - ჩემი საქართელო | ილია მართლის სახელობის საკვირაო სკოლა ვიტორია-გასტეიზში</title>
+  <title>წიგნის ნავიგატორი / PDF Reader</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
@@ -556,6 +556,63 @@
     }
     input:checked + .slider { background-color: var(--gold); }
     input:checked + .slider:before { transform: translateX(20px); }
+
+    /* Orientation Prompt Modal for Mobile Double Mode */
+    #orient-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.82);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      z-index: 200;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      color: #fff;
+      text-align: center;
+      padding: 24px;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s ease;
+    }
+    #orient-overlay.show {
+      opacity: 1;
+      pointer-events: auto;
+    }
+    #orient-overlay svg {
+      width: 54px;
+      height: 54px;
+      stroke: var(--gold);
+      fill: none;
+      stroke-width: 1.8;
+      margin-bottom: 16px;
+      animation: rotateHint 2.5s ease-in-out infinite;
+    }
+    @keyframes rotateHint {
+      0%, 10% { transform: rotate(0deg); }
+      50%, 60% { transform: rotate(-90deg); }
+      100% { transform: rotate(0deg); }
+    }
+    #orient-overlay h4 {
+      margin: 0 0 8px;
+      font-size: 18px;
+    }
+    #orient-overlay p {
+      margin: 0 0 20px;
+      font-size: 14px;
+      color: rgba(255, 255, 255, 0.75);
+    }
+    #orient-overlay button {
+      background: var(--gold);
+      color: #fff;
+      border: none;
+      padding: 10px 22px;
+      border-radius: 12px;
+      font-weight: 600;
+      font-size: 14px;
+      cursor: pointer;
+    }
   </style>
 </head>
 <body>
@@ -646,6 +703,17 @@
         </div>
       </div>
     </div>
+
+    <!-- ტელეფონის გადატრიალების მინიშნება (Orientation Prompt) -->
+    <div id="orient-overlay">
+      <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="5" y="2" width="14" height="20" rx="2" ry="2"/>
+        <line x1="12" y1="18" x2="12.01" y2="18"/>
+      </svg>
+      <h4>გთხოვთ გადაატრიალოთ ტელეფონი</h4>
+      <p>ორმაგი გვერდის რეჟიმისთვის საჭიროა ეკრანის ჰორიზონტალური (Landscape) მდებარეობა.</p>
+      <button id="orient-close">გასაგებია</button>
+    </div>
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/page-flip@2.0.7/dist/js/page-flip.browser.js"></script>
@@ -656,7 +724,7 @@
       return `pages/${pageNum}.webp`;
     });
 
-    const BOOK_TITLE = "ალმანახი - ჩემი საქართელო";
+    const BOOK_TITLE = "ჩემი წიგნი";
     document.getElementById("ttl").innerText = BOOK_TITLE;
 
     let pageFlip = null;
@@ -665,6 +733,7 @@
     let autoFlipTimer = null;
     let soundEnabled = true;
     let isSingleMode = false;
+    const isMobileDevice = window.innerWidth < 768;
 
     // რეალისტური რბილი ფურცლის შრიალის ხმა (Web Audio API)
     function playPaperSound() {
@@ -723,6 +792,12 @@
     const barEl = document.getElementById("bar");
     const stageEl = document.getElementById("stage");
     const hintEl = document.getElementById("mobile-hint");
+    const orientOverlay = document.getElementById("orient-overlay");
+    const orientCloseBtn = document.getElementById("orient-close");
+
+    orientCloseBtn.addEventListener("click", () => {
+      orientOverlay.classList.remove("show");
+    });
 
     // მენიუს გამოჩენა / დამალვის ლოგიკა
     function showBar() {
@@ -731,7 +806,7 @@
     }
 
     function hideBar() {
-      if (modalEl.classList.contains("open")) return;
+      if (modalEl.classList.contains("open") || orientOverlay.classList.contains("show")) return;
       barEl.classList.add("hidden");
     }
 
@@ -755,42 +830,82 @@
       showBar();
     });
 
-    stageEl.addEventListener("click", (e) => {
+    // მობილურზე Tap / Touch შეხებით გვერდის გადაფურცვლა
+    function handleTapToFlip(clientX) {
       dismissHint();
-      
-      if (barEl.contains(e.target) || modalEl.contains(e.target)) {
+      if (isSingleMode) return;
+
+      const screenWidth = window.innerWidth;
+      if (clientX < screenWidth * 0.4) {
+        if (pageFlip) pageFlip.flipPrev();
+      } else if (clientX > screenWidth * 0.6) {
+        if (pageFlip) pageFlip.flipNext();
+      } else {
+        showBar();
+      }
+    }
+
+    let touchStartX = 0;
+    let touchStartY = 0;
+    stageEl.addEventListener("touchstart", (e) => {
+      if (barEl.contains(e.target) || modalEl.contains(e.target) || orientOverlay.contains(e.target)) {
+        return;
+      }
+      if (e.touches.length === 1) {
+        touchStartX = e.touches[0].clientX;
+        touchStartY = e.touches[0].clientY;
+      }
+    }, { passive: true });
+
+    stageEl.addEventListener("touchend", (e) => {
+      if (barEl.contains(e.target) || modalEl.contains(e.target) || orientOverlay.contains(e.target)) {
+        return;
+      }
+      if (e.changedTouches.length === 1) {
+        const deltaX = Math.abs(e.changedTouches[0].clientX - touchStartX);
+        const deltaY = Math.abs(e.changedTouches[0].clientY - touchStartY);
+        // თუ თითის გადასმა არ იყო დიდი სქროლი (ანუ უბრალოდ Tap შეხებაა)
+        if (deltaX < 15 && deltaY < 15) {
+          handleTapToFlip(e.changedTouches[0].clientX);
+        }
+      }
+    }, { passive: true });
+
+    stageEl.addEventListener("click", (e) => {
+      if (barEl.contains(e.target) || modalEl.contains(e.target) || orientOverlay.contains(e.target)) {
         showBar();
         return;
       }
-
-      if (isSingleMode) return;
-
-      const clickX = e.clientX;
-      const screenWidth = window.innerWidth;
-
-      if (clickX < screenWidth * 0.5) {
-        if (pageFlip) pageFlip.flipPrev();
-      } else {
-        if (pageFlip) pageFlip.flipNext();
+      // Click fallback for desktop mouse clicks
+      if (!("ontouchstart" in window)) {
+        handleTapToFlip(e.clientX);
       }
     });
 
     setTimeout(dismissHint, 4000);
 
     let loadedCount = 0;
+    let isLoadFinished = false;
+
+    function hideLoader() {
+      if (isLoadFinished) return;
+      isLoadFinished = true;
+      if (loadEl) {
+        loadEl.style.opacity = "0";
+        setTimeout(() => {
+          loadEl.style.display = "none";
+        }, 600);
+      }
+      resetBarTimer();
+    }
+
     function updateLoadProgress() {
       loadedCount++;
       const pct = Math.min(100, Math.round((loadedCount / PAGES.length) * 100));
       if (lbarInner) lbarInner.style.width = `${pct}%`;
 
-      if (loadedCount >= Math.min(3, PAGES.length)) {
-        setTimeout(() => {
-          if (loadEl) {
-            loadEl.style.opacity = "0";
-            setTimeout(() => loadEl.style.display = "none", 600);
-          }
-          resetBarTimer();
-        }, 300);
+      if (loadedCount >= Math.min(2, PAGES.length)) {
+        setTimeout(hideLoader, 200);
       }
     }
 
@@ -1014,6 +1129,11 @@
         document.querySelectorAll("#view-opts .opt-btn").forEach(b => b.classList.remove("active"));
         btn.classList.add("active");
         const mode = btn.dataset.mode;
+        
+        if (mode === "double" && window.innerWidth < window.innerHeight && window.innerWidth < 768) {
+          orientOverlay.classList.add("show");
+        }
+
         const curPage = pageFlip ? pageFlip.getCurrentPageIndex() + 1 : 1;
         initBook(mode === "double");
         if (pageFlip && mode === "double") {
@@ -1022,6 +1142,15 @@
           }, 100);
         }
       });
+    });
+
+    // ეკრანის შეტრიალებისას შემოწმება
+    window.addEventListener("resize", () => {
+      if (!isSingleMode && window.innerWidth < 768 && window.innerWidth < window.innerHeight) {
+        orientOverlay.classList.add("show");
+      } else {
+        orientOverlay.classList.remove("show");
+      }
     });
 
     // Sound Toggle Logic
@@ -1049,7 +1178,22 @@
     });
 
     window.addEventListener("load", () => {
-      initBook(true);
+      // მობილურისთვის დეფოლტად ერთმაგი (Single-Page) რეჟიმის არჩევა
+      const defaultDouble = !isMobileDevice;
+      
+      // UI ღილაკის განახლება
+      const viewBtns = document.querySelectorAll("#view-opts .opt-btn");
+      viewBtns.forEach(b => b.classList.remove("active"));
+      if (defaultDouble) {
+        document.querySelector('#view-opts .opt-btn[data-mode="double"]').classList.add("active");
+      } else {
+        document.querySelector('#view-opts .opt-btn[data-mode="single"]').classList.add("active");
+      }
+
+      initBook(defaultDouble);
+
+      // უსაფრთხოების გარანტია: მაქსიმუმ 2 წამში ჩატვირთვის ფანჯარა აუცილებლად გაქრება
+      setTimeout(hideLoader, 2000);
     });
   </script>
 </body>
